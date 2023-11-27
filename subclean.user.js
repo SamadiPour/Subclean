@@ -12,7 +12,6 @@
 const showAll = true; // make it false to only keep one
 const cleanText = true; // make it false if you don't want to see changes in the Release Name/Film title
 
-
 (function() {
     'use strict';
 
@@ -42,26 +41,28 @@ const cleanText = true; // make it false if you don't want to see changes in the
         });
 
         // clean the text
-        const movieName = document.getElementsByClassName('header')[0].querySelector('h2').textContent.trim().split('\n')[0];
-        const newRows = document.getElementsByTagName('table')[0].querySelectorAll('tr');
-        newRows.forEach((row) => {
-            const anchorElement = row.querySelector('td.a1 a');
-            if (anchorElement) {
-                const spans = anchorElement.querySelectorAll('span:nth-child(even)');
-                if (spans) {
-                    spans.forEach((span) => {
-                        var title = span.innerText;
-                        title = title.replace(/\./g, ' ');
-                        title = title.replace(RegExp(movieName, 'gi'), '').trim();
-                        title = title.replace(/(19|20)\d{2}/gm, '');
-                        title = title.replace(/\(\s*\)/g, '').trim();
-                        title = title.replace(/ {2,}/g, ' ').trim();
-                        title = title.replace(/[\[\]]/g, '').trim();
-                        span.innerText = title ? title : movieName;
-                    });
+        if (cleanText) {
+            const movieName = document.getElementsByClassName('header')[0].querySelector('h2').textContent.trim().split('\n')[0];
+            const newRows = document.getElementsByTagName('table')[0].querySelectorAll('tr');
+            newRows.forEach((row) => {
+                const anchorElement = row.querySelector('td.a1 a');
+                if (anchorElement) {
+                    const spans = anchorElement.querySelectorAll('span:nth-child(even)');
+                    if (spans) {
+                        spans.forEach((span) => {
+                            var title = span.innerText;
+                            title = title.replace(/\./g, ' ');
+                            title = title.replace(RegExp(movieName, 'gi'), '').trim();
+                            title = title.replace(/(19|20)\d{2}/gm, '');
+                            title = title.replace(/\(\s*\)/g, '').trim();
+                            title = title.replace(/ {2,}/g, ' ').trim();
+                            title = title.replace(/[\[\]]/g, '').trim();
+                            span.innerText = title ? title : movieName;
+                        });
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     function observeDOM() {
