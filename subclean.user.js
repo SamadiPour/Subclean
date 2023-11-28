@@ -33,7 +33,6 @@ const cleanMovieNameStringValues = ["'", ":"];
                         const origElement = uniqueElements[href].querySelector('td.a1 a');
                         var spanElement = document.createElement('span');
                         spanElement.className = 'l r';
-                        spanElement.textContent = '\u200C';
                         origElement.appendChild(spanElement);
                         origElement.appendChild(anchorElement.children[1]);
                     }
@@ -59,6 +58,7 @@ const cleanMovieNameStringValues = ["'", ":"];
                 const anchorElement = row.querySelector('td.a1 a');
                 if (anchorElement) {
                     const spans = anchorElement.querySelectorAll('span:nth-child(even)');
+                    let info = [];
                     if (spans) {
                         spans.forEach((span) => {
                             var title = span.innerText;
@@ -68,8 +68,18 @@ const cleanMovieNameStringValues = ["'", ":"];
                             title = title.replace(/\(\s*\)/g, '').trim();
                             title = title.replace(/ {2,}/g, ' ').trim();
                             title = title.replace(/[\[\]]/g, '').trim();
-                            span.innerText = title ? title : movieName;
+                            info.push(title);
+                            anchorElement.removeChild(span);
                         });
+
+                        const cleanInfo = cleanUpInfo(info);
+                        // create span for each 70 characters
+                        const spanElement = document.createElement('span');
+                        spanElement.style = 'display: inline-block;';
+                        spanElement.innerHTML = cleanInfo;
+
+                        anchorElement.appendChild(spanElement);
+
                     }
                 }
             });
@@ -88,5 +98,177 @@ const cleanMovieNameStringValues = ["'", ":"];
         var observer = new MutationObserver(callback);
         observer.observe(targetNode, config);
     }
+
+    function getSeason(string) {
+        let r1 = /(staffel|season|saison|series|temporada)[\s_.-]?(\d{1,4})/i;
+
+        let m1 = string.match(r1);
+        if (m1) {
+            return m1[0];
+        }
+
+        return [];
+    }
+
+    function getSeasonAndEpisode(string) {
+        const r1 = /s(\d{1,4})[ ]?((?:([epx.-]+\d{1,4})+))/gi
+        const r2 = /(\d{1,4})(?=x)((?:([epx]+\d{1,4})+))/gi
+
+        const m1 = string.match(r1);
+        const m2 = string.match(r2);
+
+        if (m1) {
+            return m1.concat(m2 || []);
+        }
+
+        return m2 || [];
+    }
+
+    function getCodecs(string) {
+        const r1 = /((?:[hx]\.?\s?264)|(?:[hx]\.?265)|(?:hevc))/gi
+        // also get 10bit
+        const r2 = /((?:10bit))/gi
+
+        const m1 = string.match(r1);
+        const m2 = string.match(r2);
+
+        if (m1) {
+            return m1.concat(m2 || []);
+        }
+
+        return m2 || [];
+    }
+
+    function getResolution(string) {
+        const r1 = /((?:\d{3,4}[p|i]))/gi
+        // also 2k, 4k, 8k
+        const r2 = /((?:\d{1}[k]))/gi
+
+        const m1 = string.match(r1);
+        const m2 = string.match(r2);
+
+        if (m1) {
+            return m1.concat(m2 || []);
+        }
+
+        return m2 || [];
+    }
+
+    function getQuality(string) {
+        const qualities = [
+            '(uhd|ultrahd)[ .\-]?(bluray|blueray|bdrip|brrip|dbrip|bd25|bd50|bdmv|blu\-ray)',
+            '(bluray|blueray|bdrip|brrip|dbrip|bd25|bd50|bdmv|blu\-ray)', '(dvd|video_ts|dvdrip|dvdr)', '(hddvd|hddvdrip)', '(tv|hdtv|pdtv|dsr|dtb|dtt|dttv|dtv|hdtvrip|tvrip|dvbrip)',
+            '(vhs|vhsrip)', '(laserdisc|ldrip)', 'D-VHS', '(hdrip)', '(cam)', '(\sts|telesync|hdts|ht\-ts)', '(tc|telecine|hdtc|ht\-tc)', '(dvdscr)',
+            '(\sr5)', '(webrip)', '(web-dl|webdl|web)'
+        ];
+
+        // return all matches
+        const r1 = new RegExp(qualities.join('|'), 'gi');
+
+        const m1 = string.match(r1);
+
+        if (m1) {
+            return m1;
+        }
+
+        return [];
+    }
+
+
+    function cleanUpInfo(strings) {
+
+        // get all info and store them in info object
+        const info = {
+            seasons: [],
+            episodes: [],
+            codecs: [],
+            resolutions: [],
+            qualities: []
+        };
+
+        strings.forEach(string => {
+            info.seasons.push(getSeason(string));
+            info.episodes.push(getSeasonAndEpisode(string));
+            info.codecs.push(getCodecs(string));
+            info.resolutions.push(getResolution(string));
+            info.qualities.push(getQuality(string));
+        });
+
+        // flatten arrays
+        info.seasons = info.seasons.flat();
+        info.episodes = info.episodes.flat();
+        info.codecs = info.codecs.flat();
+        info.resolutions = info.resolutions.flat();
+        info.qualities = info.qualities.flat();
+
+        // remove duplicates
+        info.seasons = [...new Set(info.seasons)];
+        info.episodes = [...new Set(info.episodes)];
+        info.codecs = [...new Set(info.codecs)];
+        info.resolutions = [...new Set(info.resolutions)];
+        info.qualities = [...new Set(info.qualities)];
+
+        // sort based on length
+        info.seasons.sort((a, b) => b.length - a.length);
+        info.episodes.sort((a, b) => b.length - a.length);
+        info.codecs.sort((a, b) => b.length - a.length);
+        info.resolutions.sort((a, b) => b.length - a.length);
+        info.qualities.sort((a, b) => b.length - a.length);
+
+
+        // remove all info from strings
+
+        for (let key in info) {
+            info[key].forEach(item => {
+                strings.forEach((string, index) => {
+                    strings[index] = string.replace(item, '');
+                });
+            });
+        }
+
+        // remove all special characters and whitespaces
+        let additional = []
+        strings.forEach((string, index) => {
+            let str = strings[index];
+            // remove special characters
+            str = str.replace(/[^a-zA-Z0-9\s]/g, '');
+            str = str.replace(/\s+/g, ' ');
+            str = str.replace(/\s\-/g, ' ');
+            str = str.replace(/\-\s/g, ' ');
+            str = str.trim();
+
+            additional.push(str);
+        });
+
+        // remove duplicates
+        additional = [...new Set(additional)];
+
+        let result = "";
+        // first write info with key
+        if (info.seasons.length > 0) {
+            result += "Seasons: " + info.seasons.join(', ') + "<br>";
+        }
+        if (info.episodes.length > 0) {
+            result += "Episode: " + info.episodes.join(', ') + "<br>";
+        }
+        if (info.resolutions.length > 0) {
+            result += "Resolutions: " + info.resolutions.join(', ') + "<br>";
+        }
+        if (info.codecs.length > 0) {
+            result += "Codecs: " + info.codecs.join(', ') + "<br>";
+        }
+        if (info.qualities.length > 0) {
+            result += "Releases: " + info.qualities.join(', ') + "<br>";
+        }
+        if (additional.length > 0) {
+            let temp = "Encoders: " + additional.join(', ');
+            // wrap each 70 characters with <br>
+            result += temp.replace(/(.{65})/g, '$1<br>');
+        }
+        return result;
+
+    }
+
+
     observeDOM();
 })();
