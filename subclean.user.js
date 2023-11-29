@@ -51,6 +51,12 @@ const cleanMovieNameStringValues = ["'", ":"];
 
         // clean the text
         if (cleanText) {
+            // css
+            var style = document.createElement('style');
+            style.innerHTML = '.subtitles td.a1 span {white-space: pre-line;} .subtitles td.a1 span.l {white-space: initial}';
+            document.head.appendChild(style);
+
+            // logic
             const movieName = document.getElementsByClassName('header')[0].querySelector('h2').textContent.trim().split('\n')[0];
             const movieNameClean = cleanString(movieName.lastIndexOf(' - ') === -1 ? movieName.trim() : movieName.substring(0, movieName.lastIndexOf(' - ')).trim());
             const newRows = document.getElementsByTagName('table')[0].querySelectorAll('tr');
@@ -73,13 +79,9 @@ const cleanMovieNameStringValues = ["'", ":"];
                         });
 
                         const cleanInfo = cleanUpInfo(info);
-                        // create span for each 70 characters
                         const spanElement = document.createElement('span');
-                        spanElement.style = 'display: inline-block;';
                         spanElement.innerHTML = cleanInfo;
-
                         anchorElement.appendChild(spanElement);
-
                     }
                 }
             });
@@ -174,9 +176,7 @@ const cleanMovieNameStringValues = ["'", ":"];
         return [];
     }
 
-
     function cleanUpInfo(strings) {
-
         // get all info and store them in info object
         const info = {
             seasons: [],
@@ -217,7 +217,6 @@ const cleanMovieNameStringValues = ["'", ":"];
 
 
         // remove all info from strings
-
         for (let key in info) {
             info[key].forEach(item => {
                 strings.forEach((string, index) => {
@@ -261,14 +260,10 @@ const cleanMovieNameStringValues = ["'", ":"];
             result += "Releases: " + info.qualities.join(', ') + "<br>";
         }
         if (additional.length > 0) {
-            let temp = "Encoders: " + additional.join(', ');
-            // wrap each 70 characters with <br>
-            result += temp.replace(/(.{65})/g, '$1<br>');
+            result += "Encoders: " + additional.join(', ');
         }
         return result;
-
     }
-
 
     observeDOM();
 })();
