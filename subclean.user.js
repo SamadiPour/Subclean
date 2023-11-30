@@ -23,14 +23,16 @@ const cleanMovieNameStringValues = ["'", ":"];
 
     // get features and register menu items
     // todo: make it a function
-    const cleanTextEnabled = localStorage.getItem(cleanTextKey) === 'true' ?? cleanTextDefault;
+    const cleanTextEnabled = JSON.parse(localStorage.getItem(cleanTextKey)) ?? cleanTextDefault;
     GM_registerMenuCommand(cleanTextEnabled ? "Clean Text - Enabled" : "Clean Text - Disabled", () => toggleFeature(cleanTextKey, cleanTextEnabled));
-    const parseTextEnabled = localStorage.getItem(parseTextKey) === 'true' ?? parseTextDefault;
-    GM_registerMenuCommand(parseTextEnabled ? "Parse Text - Enabled" : "Parse Text - Disabled", () => toggleFeature(parseTextKey, parseTextEnabled, []));
+    const parseTextEnabled = JSON.parse(localStorage.getItem(parseTextKey)) ?? parseTextDefault;
+    GM_registerMenuCommand(parseTextEnabled ? "Parse Text - Enabled" : "Parse Text - Disabled", () => toggleFeature(parseTextKey, parseTextEnabled));
     function toggleFeature(feature, currentValue, dependent) {
         localStorage.setItem(feature, !currentValue);
         if (feature == parseTextKey && !currentValue == true) {
             localStorage.setItem(cleanTextKey, true);
+        } else if (feature == cleanTextKey && !currentValue == false) {
+            localStorage.setItem(parseTextKey, false);
         }
         location.reload();
     }
