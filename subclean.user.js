@@ -6,17 +6,36 @@
 // @description  Subscene subtitle list cleaner
 // @match        https://subscene.com/subtitles/*
 // @icon         https://subscene.com/favicon.ico
-// @grant        none
+// @grant        GM_registerMenuCommand
 // ==/UserScript==
 
-const showAll = true; // make it false to only keep one
-const cleanText = true; // make it false if you don't want to see changes in the Release Name/Film title
+// features
+const cleanTextDefault = true;
+const cleanTextKey = 'subclean_clean_text_feature';
+const parseTextDefault = true;
+const parseTextKey = 'subclean_parse_text_feature';
 
+// parameters
 const cleanMovieNameStringValues = ["'", ":"];
 
 (function() {
     'use strict';
 
+    // get features and register menu items
+    // todo: make it a function
+    const cleanTextEnabled = localStorage.getItem(cleanTextKey) === 'true' ?? cleanTextDefault;
+    GM_registerMenuCommand(cleanTextEnabled ? "Clean Text - Enabled" : "Clean Text - Disabled", () => toggleFeature(cleanTextKey, cleanTextEnabled));
+    const parseTextEnabled = localStorage.getItem(parseTextKey) === 'true' ?? parseTextDefault;
+    GM_registerMenuCommand(parseTextEnabled ? "Parse Text - Enabled" : "Parse Text - Disabled", () => toggleFeature(parseTextKey, parseTextEnabled, []));
+    function toggleFeature(feature, currentValue, dependent) {
+        localStorage.setItem(feature, !currentValue);
+        if (feature == parseTextKey && !currentValue == true) {
+            localStorage.setItem(cleanTextKey, true);
+        }
+        location.reload();
+    }
+
+    // main function
     function removeDuplicates() {
         const uniqueElements = {};
 
@@ -29,13 +48,14 @@ const cleanMovieNameStringValues = ["'", ":"];
                 if (href && !uniqueElements[href]) {
                     uniqueElements[href] = row;
                 } else {
-                    if (showAll) {
-                        const origElement = uniqueElements[href].querySelector('td.a1 a');
-                        var spanElement = document.createElement('span');
-                        spanElement.className = 'l r';
-                        origElement.appendChild(spanElement);
-                        origElement.appendChild(anchorElement.children[1]);
+                    const origElement = uniqueElements[href].querySelector('td.a1 a');
+                    var spanElement = document.createElement('span');
+                    spanElement.className = 'l r';
+                    if (!parseTextEnabled) {
+                        spanElement.textContent = '\u200C';
                     }
+                    origElement.appendChild(spanElement);
+                    origElement.appendChild(anchorElement.children[1]);
                     row.parentNode.removeChild(row);
                 }
             }
@@ -50,7 +70,7 @@ const cleanMovieNameStringValues = ["'", ":"];
         }
 
         // clean the text
-        if (cleanText) {
+        if (cleanTextEnabled) {
             // css
             var style = document.createElement('style');
             style.innerHTML = '.subtitles td.a1 span {white-space: pre-line;} .subtitles td.a1 span.l {white-space: initial}';
@@ -74,14 +94,20 @@ const cleanMovieNameStringValues = ["'", ":"];
                             title = title.replace(/\(\s*\)/g, '').trim();
                             title = title.replace(/ {2,}/g, ' ').trim();
                             title = title.replace(/[\[\]]/g, '').trim();
-                            info.push(title);
-                            anchorElement.removeChild(span);
+                            if (parseTextEnabled) {
+                                info.push(title);
+                                anchorElement.removeChild(span);
+                            } else {
+                                span.innerText = title ? title : movieName;
+                            }
                         });
 
-                        const cleanInfo = cleanUpInfo(info);
-                        const spanElement = document.createElement('span');
-                        spanElement.innerHTML = cleanInfo;
-                        anchorElement.appendChild(spanElement);
+                        if (parseTextEnabled) {
+                            const cleanInfo = cleanUpInfo(info);
+                            const spanElement = document.createElement('span');
+                            spanElement.innerHTML = cleanInfo;
+                            anchorElement.appendChild(spanElement);
+                        }
                     }
                 }
             });
@@ -176,6 +202,7 @@ const cleanMovieNameStringValues = ["'", ":"];
         return [];
     }
 
+
     function cleanUpInfo(strings) {
         // get all info and store them in info object
         const info = {
@@ -215,7 +242,6 @@ const cleanMovieNameStringValues = ["'", ":"];
         info.resolutions.sort((a, b) => b.length - a.length);
         info.qualities.sort((a, b) => b.length - a.length);
 
-
         // remove all info from strings
         for (let key in info) {
             info[key].forEach(item => {
@@ -245,22 +271,22 @@ const cleanMovieNameStringValues = ["'", ":"];
         let result = "";
         // first write info with key
         if (info.seasons.length > 0) {
-            result += "Seasons: " + info.seasons.join(', ') + "<br>";
+            result += "<b>Seasons:</b> " + info.seasons.join(', ') + "<br>";
         }
         if (info.episodes.length > 0) {
-            result += "Episode: " + info.episodes.join(', ') + "<br>";
+            result += "<b>Episode:</b> " + info.episodes.join(', ') + "<br>";
         }
         if (info.resolutions.length > 0) {
-            result += "Resolutions: " + info.resolutions.join(', ') + "<br>";
+            result += "<b>Resolutions:</b> " + info.resolutions.join(', ') + "<br>";
         }
         if (info.codecs.length > 0) {
-            result += "Codecs: " + info.codecs.join(', ') + "<br>";
+            result += "<b>Codecs:</b> " + info.codecs.join(', ') + "<br>";
         }
         if (info.qualities.length > 0) {
-            result += "Releases: " + info.qualities.join(', ') + "<br>";
+            result += "<b>Releases:</b> " + info.qualities.join(', ') + "<br>";
         }
         if (additional.length > 0) {
-            result += "Encoders: " + additional.join(', ');
+            result += "<b>Encoders:</b> " + additional.join(', ');
         }
         return result;
     }
