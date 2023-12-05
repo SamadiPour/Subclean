@@ -2,7 +2,7 @@
 // @name         Subclean
 // @namespace    http://github.com/SamadiPour
 // @author       http://github.com/SamadiPour
-// @version      1.1
+// @version      1.2
 // @description  Subscene subtitle list cleaner
 // @match        https://subscene.com/subtitles/*
 // @icon         https://subscene.com/favicon.ico
