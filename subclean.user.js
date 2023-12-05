@@ -2,7 +2,7 @@
 // @name         Subclean
 // @namespace    http://github.com/SamadiPour
 // @author       http://github.com/SamadiPour
-// @version      1.2
+// @version      1.1
 // @description  Subscene subtitle list cleaner
 // @match        https://subscene.com/subtitles/*
 // @icon         https://subscene.com/favicon.ico
@@ -193,12 +193,11 @@ const cleanMovieNameStringValues = ["'", ":"];
     }
 
     function getCodecs(string) {
-        const r1 = /((?:[hx]\.?\s?264)|(?:[hx]\.?265)|(?:hevc))/gi
-        // also get 10bit
-        const r2 = /((?:10bit))/gi
+        const r1 = /((?:[hx]\.?\s?264)|(?:[hx]\.?265)|(?:hevc))/gi;
+        const r2 = /((?:10bit))/gi; // also get 10bit
 
-        const m1 = string.match(r1);
-        const m2 = string.match(r2);
+        var m1 = string.match(r1);
+        var m2 = string.match(r2);
 
         if (m1) {
             return m1.concat(m2 || []);
@@ -323,7 +322,7 @@ const cleanMovieNameStringValues = ["'", ":"];
             }
         }
         info.codecs = cleanCodecs;
-        
+
         let result = "";
         // first write info with key
         if (info.seasons.length > 0) {
