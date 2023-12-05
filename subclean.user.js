@@ -9,117 +9,58 @@
 // @grant        GM_registerMenuCommand
 // ==/UserScript==
 
-// features
-const cleanTextDefault = true;
-const cleanTextKey = 'subclean_clean_text_feature';
-const parseTextDefault = true;
-const parseTextKey = 'subclean_parse_text_feature';
+// Features
+const features = {
+    cleanText: {
+        name: 'Remove unnecessary text',
+        default: true,
+        key: 'subclean_clean_text_feature'
+    },
+    textClassification: {
+        name: 'Info Cleanup',
+        default: true,
+        key: 'subclean_parse_text_feature'
+    }
+};
 
-// parameters
+// Parameters
 const cleanMovieNameStringValues = ["'", ":"];
 
-(function() {
+(function () {
     'use strict';
 
-    // get features and register menu items
-    // todo: make it a function
-    const cleanTextEnabled = JSON.parse(localStorage.getItem(cleanTextKey)) ?? cleanTextDefault;
-    GM_registerMenuCommand(cleanTextEnabled ? "Clean Text - Enabled" : "Clean Text - Disabled", () => toggleFeature(cleanTextKey, cleanTextEnabled));
-    const parseTextEnabled = JSON.parse(localStorage.getItem(parseTextKey)) ?? parseTextDefault;
-    GM_registerMenuCommand(parseTextEnabled ? "Parse Text - Enabled" : "Parse Text - Disabled", () => toggleFeature(parseTextKey, parseTextEnabled));
-    function toggleFeature(feature, currentValue, dependent) {
-        localStorage.setItem(feature, !currentValue);
-        if (feature == parseTextKey && !currentValue == true) {
-            localStorage.setItem(cleanTextKey, true);
-        } else if (feature == cleanTextKey && !currentValue == false) {
-            localStorage.setItem(parseTextKey, false);
-        }
-        location.reload();
-    }
+    // Get features and register menu items
+    initializeFeatures();
 
-    // main function
+    // Main function
     function removeDuplicates() {
         const uniqueElements = {};
+        const rows = document.querySelector('table').querySelectorAll('tr');
 
         // group duplicates
-        const rows = document.getElementsByTagName('table')[0].querySelectorAll('tr');
         rows.forEach((row) => {
             const anchorElement = row.querySelector('td.a1 a');
             if (anchorElement) {
-                const href = anchorElement ? anchorElement.getAttribute('href') : null;
+                const href = anchorElement.getAttribute('href');
                 if (href && !uniqueElements[href]) {
                     uniqueElements[href] = row;
                 } else {
-                    const origElement = uniqueElements[href].querySelector('td.a1 a');
-                    var spanElement = document.createElement('span');
-                    spanElement.className = 'l r';
-                    if (!parseTextEnabled) {
-                        spanElement.textContent = '\u200C';
-                    }
-                    origElement.appendChild(spanElement);
-                    origElement.appendChild(anchorElement.children[1]);
+                    mergeDuplicateRows(uniqueElements[href], anchorElement);
                     row.parentNode.removeChild(row);
                 }
             }
         });
 
-        function cleanString(str) {
-            let result = str;
-            for (let value of cleanMovieNameStringValues) {
-                result = result.replace(RegExp(value, 'gi'), '');
-            }
-            return result;
-        }
-
         // clean the text
-        if (cleanTextEnabled) {
-            // css
-            var style = document.createElement('style');
-            style.innerHTML = '.subtitles td.a1 span {white-space: pre-line;} .subtitles td.a1 span.l {white-space: initial}';
-            document.head.appendChild(style);
-
-            // logic
-            const movieName = document.getElementsByClassName('header')[0].querySelector('h2').textContent.trim().split('\n')[0];
-            const movieNameClean = cleanString(movieName.lastIndexOf(' - ') === -1 ? movieName.trim() : movieName.substring(0, movieName.lastIndexOf(' - ')).trim());
-            const newRows = document.getElementsByTagName('table')[0].querySelectorAll('tr');
-            newRows.forEach((row) => {
-                const anchorElement = row.querySelector('td.a1 a');
-                if (anchorElement) {
-                    const spans = anchorElement.querySelectorAll('span:nth-child(even)');
-                    let info = [];
-                    if (spans) {
-                        spans.forEach((span) => {
-                            var title = span.innerText;
-                            title = title.replace(/\./g, ' ');
-                            title = title.replace(RegExp(movieNameClean, 'gi'), '').trim();
-                            title = title.replace(/(19|20)\d{2}/gm, '');
-                            title = title.replace(/\(\s*\)/g, '').trim();
-                            title = title.replace(/ {2,}/g, ' ').trim();
-                            title = title.replace(/[\[\]]/g, '').trim();
-                            if (parseTextEnabled) {
-                                info.push(title);
-                                anchorElement.removeChild(span);
-                            } else {
-                                span.innerText = title ? title : movieName;
-                            }
-                        });
-
-                        if (parseTextEnabled) {
-                            const cleanInfo = cleanUpInfo(info);
-                            const spanElement = document.createElement('span');
-                            spanElement.innerHTML = cleanInfo;
-                            anchorElement.appendChild(spanElement);
-                        }
-                    }
-                }
-            });
+        if (features.cleanText.enabled) {
+            modifySubtitleText()
         }
     }
 
     function observeDOM() {
         var targetNode = document.body;
         var config = { childList: true, subtree: true };
-        var callback = function(mutationsList, observer) {
+        var callback = function (mutationsList, observer) {
             if (document.querySelector('table')) {
                 observer.disconnect();
                 removeDuplicates();
@@ -127,6 +68,103 @@ const cleanMovieNameStringValues = ["'", ":"];
         };
         var observer = new MutationObserver(callback);
         observer.observe(targetNode, config);
+    }
+
+    // ========== Additional functions ==========
+
+    function initializeFeatures() {
+        for (const feature in features) {
+            const { name, key, default: defaultValue } = features[feature];
+            const isEnabled = JSON.parse(localStorage.getItem(key)) ?? defaultValue;
+
+            features[feature].enabled = isEnabled;
+
+            GM_registerMenuCommand(
+                isEnabled ? `${name} - Enabled` : `${name} - Disabled`,
+                () => toggleFeature(key, isEnabled)
+            );
+        }
+    }
+
+    function toggleFeature(featureKey, currentValue) {
+        localStorage.setItem(featureKey, !currentValue);
+
+        if (featureKey === features.textClassification.key && !currentValue) {
+            localStorage.setItem(features.cleanText.key, true);
+        } else if (featureKey === features.cleanText.key && !currentValue) {
+            localStorage.setItem(features.textClassification.key, false);
+        }
+
+        location.reload();
+    }
+
+    function capitalizeFirstLetter(string) {
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+
+    function mergeDuplicateRows(originalRow, anchorElement) {
+        const origElement = originalRow.querySelector('td.a1 a');
+        const spanElement = document.createElement('span');
+        spanElement.className = 'l r';
+
+        if (!features.textClassification.enabled) {
+            spanElement.textContent = '\u200C';
+        }
+
+        origElement.appendChild(spanElement);
+        origElement.appendChild(anchorElement.children[1]);
+    }
+
+
+    function modifySubtitleText() {
+        // css
+        var style = document.createElement('style');
+        style.innerHTML = '.subtitles td.a1 span {white-space: pre-line;} .subtitles td.a1 span.l {white-space: initial}';
+        document.head.appendChild(style);
+
+        // logic
+        const movieName = getMovieNameFromPage();
+        const movieNameClean = cleanString(movieName.lastIndexOf(' - ') === -1 ? movieName.trim() : movieName.substring(0, movieName.lastIndexOf(' - ')).trim());
+        const newRows = document.getElementsByTagName('table')[0].querySelectorAll('tr');
+        newRows.forEach((row) => {
+            const anchorElement = row.querySelector('td.a1 a');
+            if (anchorElement) {
+                const spans = anchorElement.querySelectorAll('span:nth-child(even)');
+                let info = [];
+                if (spans) {
+                    spans.forEach((span) => {
+                        var title = span.innerText;
+                        title = title.replace(/\./g, ' ');
+                        title = title.replace(RegExp(movieNameClean, 'gi'), '').trim();
+                        title = title.replace(/(19|20)\d{2}/gm, '');
+                        title = title.replace(/\(\s*\)/g, '').trim();
+                        title = title.replace(/ {2,}/g, ' ').trim();
+                        title = title.replace(/[\[\]]/g, '').trim();
+                        if (features.textClassification.enabled) {
+                            info.push(title);
+                            anchorElement.removeChild(span);
+                        } else {
+                            span.innerText = title ? title : movieName;
+                        }
+                    });
+
+                    if (features.textClassification.enabled) {
+                        const cleanInfo = cleanUpInfo(info);
+                        const spanElement = document.createElement('span');
+                        spanElement.innerHTML = cleanInfo;
+                        anchorElement.appendChild(spanElement);
+                    }
+                }
+            }
+        });
+    }
+
+    function cleanString(str) {
+        let result = str;
+        for (let value of cleanMovieNameStringValues) {
+            result = result.replace(RegExp(value, 'gi'), '');
+        }
+        return result;
     }
 
     function getSeason(string) {
@@ -204,6 +242,10 @@ const cleanMovieNameStringValues = ["'", ":"];
         return [];
     }
 
+    function getMovieNameFromPage() {
+        return document.getElementsByClassName('header')[0].querySelector('h2').textContent.trim().split('\n')[0];
+    }
+
 
     function cleanUpInfo(strings) {
         // get all info and store them in info object
@@ -269,6 +311,7 @@ const cleanMovieNameStringValues = ["'", ":"];
 
         // remove duplicates
         additional = [...new Set(additional)];
+        additional = additional.filter(str => str.trim() !== '');
 
         let result = "";
         // first write info with key
@@ -290,7 +333,9 @@ const cleanMovieNameStringValues = ["'", ":"];
         if (additional.length > 0) {
             result += "<b>Encoders:</b> " + additional.join(', ');
         }
-        return result;
+
+        // return restult or if it's empty, just the name of the movie!
+        return result.trim() === "" ? getMovieNameFromPage() : result;
     }
 
     observeDOM();
