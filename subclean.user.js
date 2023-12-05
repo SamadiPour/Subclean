@@ -313,6 +313,17 @@ const cleanMovieNameStringValues = ["'", ":"];
         additional = [...new Set(additional)];
         additional = additional.filter(str => str.trim() !== '');
 
+        // clean codecs
+        var cleanCodecs = info.codecs;
+        cleanCodecs = cleanCodecs.map(codec => codec.toUpperCase().replace(/\s/g, ''));
+        for (var i = 0; i < cleanCodecs.length; i++) {
+            if (cleanCodecs[i].startsWith("H") && cleanCodecs.includes("X" + cleanCodecs[i].substring(1))) {
+                cleanCodecs.splice(i, 1);
+                i--; // Adjust index after removal
+            }
+        }
+        info.codecs = cleanCodecs;
+        
         let result = "";
         // first write info with key
         if (info.seasons.length > 0) {
