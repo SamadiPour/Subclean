@@ -167,6 +167,7 @@ const cleanMovieNameStringValues = ["'", ":"];
         return result;
     }
 
+    // Most regexes in the following functions are from https://gitlab.com/tinyMediaManager/tinyMediaManager.
     function getSeason(string) {
         let r1 = /(staffel|season|saison|series|temporada)[\s_.-]?(\d{1,4})/i;
 
