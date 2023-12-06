@@ -17,7 +17,12 @@ Subclean is a userscript designed to enhance the user experience on Subscene by 
 
 ## Installation
 
-1. Install a userscript manager extension for your browser, such as Tampermonkey.
+1. Install a userscript manager extension for your browser:
+
+	* [Tampermonkey](https://www.tampermonkey.net/)
+	* [Violentmonkey](https://violentmonkey.github.io/get-it/)
+	* [Greasemonkey](https://addons.mozilla.org/firefox/addon/greasemonkey/)
+
 2. Click [here](https://github.com/SamadiPour/Subclean/raw/main/subclean.user.js) to install the Subclean userscript.
 
 ## Usage
