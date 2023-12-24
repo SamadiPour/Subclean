@@ -2,7 +2,7 @@
 // @name         Subclean
 // @namespace    http://github.com/SamadiPour
 // @author       http://github.com/SamadiPour
-// @version      1.2
+// @version      1.3
 // @description  Subscene subtitle list cleaner
 // @match        https://subscene.com/subtitles/*
 // @icon         https://subscene.com/favicon.ico
@@ -24,7 +24,7 @@ const features = {
 };
 
 // Parameters
-const cleanMovieNameStringValues = ["'", ":"];
+const cleanMovieNameStringValues = ["'", ":", "?", "."];
 
 (function () {
     'use strict';
@@ -135,7 +135,7 @@ const cleanMovieNameStringValues = ["'", ":"];
                     spans.forEach((span) => {
                         var title = span.innerText;
                         title = title.replace(/\./g, ' ');
-                        title = title.replace(RegExp(movieNameClean, 'gi'), '').trim();
+                        title = title.replace(RegExp(escapeRegExp(movieNameClean), 'gi'), '').trim();
                         title = title.replace(/(19|20)\d{2}/gm, '');
                         title = title.replace(/\(\s*\)/g, '').trim();
                         title = title.replace(/ {2,}/g, ' ').trim();
@@ -159,10 +159,14 @@ const cleanMovieNameStringValues = ["'", ":"];
         });
     }
 
+    function escapeRegExp(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+    }
+
     function cleanString(str) {
         let result = str;
         for (let value of cleanMovieNameStringValues) {
-            result = result.replace(RegExp(value, 'gi'), '');
+            result = result.replace(RegExp(escapeRegExp(value), 'gi'), '');
         }
         return result;
     }
